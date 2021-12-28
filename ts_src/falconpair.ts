@@ -3,18 +3,15 @@ import * as networks from './networks';
 import * as types from './types';
 import * as randomBytes from 'randombytes';
 import * as wif from 'wif';
-import { testEcc } from './testecc';
 export { networks };
 
 const isOptions = types.typeforce.maybe(
   types.typeforce.compile({
-    compressed: types.maybe(types.Boolean),
     network: types.maybe(types.Network),
   }),
 );
 
-interface ECPairOptions {
-  compressed?: boolean;
+interface FalconPairOptions {
   network?: Network;
   rng?(arg0: number): Buffer;
 }
@@ -22,34 +19,29 @@ interface ECPairOptions {
 export interface Signer {
   publicKey: Buffer;
   network?: any;
-  sign(hash: Buffer, lowR?: boolean): Buffer;
+  sign(hash: Buffer): Buffer;
   getPublicKey?(): Buffer;
 }
 
 export interface SignerAsync {
   publicKey: Buffer;
   network?: any;
-  sign(hash: Buffer, lowR?: boolean): Promise<Buffer>;
+  sign(hash: Buffer): Promise<Buffer>;
   getPublicKey?(): Buffer;
 }
 
-export interface ECPairInterface extends Signer {
-  compressed: boolean;
+export interface FalconPairInterface extends Signer {
   network: Network;
-  lowR: boolean;
   privateKey?: Buffer;
   toWIF(): string;
   verify(hash: Buffer, signature: Buffer): boolean;
-  verifySchnorr(hash: Buffer, signature: Buffer): boolean;
-  signSchnorr(hash: Buffer): Buffer;
 }
 
-export interface ECPairAPI {
-  isPoint(maybePoint: any): boolean;
-  fromPrivateKey(buffer: Buffer, options?: ECPairOptions): ECPairInterface;
-  fromPublicKey(buffer: Buffer, options?: ECPairOptions): ECPairInterface;
-  fromWIF(wifString: string, network?: Network | Network[]): ECPairInterface;
-  makeRandom(options?: ECPairOptions): ECPairInterface;
+export interface FalconPairAPI {
+  fromPrivateKey(buffer: Buffer, options?: FalconPairOptions): FalconPairInterface;
+  fromPublicKey(buffer: Buffer, options?: FalconPairOptions): FalconPairInterface;
+  fromWIF(wifString: string, network?: Network | Network[]): FalconPairInterface;
+  makeRandom(options?: FalconPairOptions): FalconPairInterface;
 }
 
 export interface TinySecp256k1Interface {
@@ -70,37 +62,34 @@ export interface TinySecp256k1Interface {
   verifySchnorr?(h: Uint8Array, Q: Uint8Array, signature: Uint8Array): boolean;
 }
 
-export function ECPairFactory(ecc: TinySecp256k1Interface): ECPairAPI {
-  testEcc(ecc);
-  function isPoint(maybePoint: any): boolean {
-    return ecc.isPoint(maybePoint);
-  }
+export function FalconPairFactory(ecc: TinySecp256k1Interface): FalconPairAPI {
+
 
   function fromPrivateKey(
     buffer: Buffer,
-    options?: ECPairOptions,
-  ): ECPairInterface {
+    options?: FalconPairOptions,
+  ): FalconPairInterface {
     types.typeforce(types.Buffer256bit, buffer);
     if (!ecc.isPrivate(buffer))
       throw new TypeError('Private key not in range [1, n)');
     types.typeforce(isOptions, options);
 
-    return new ECPair(buffer, undefined, options);
+    return new FalconPair(buffer, undefined, options);
   }
 
   function fromPublicKey(
     buffer: Buffer,
-    options?: ECPairOptions,
-  ): ECPairInterface {
+    options?: FalconPairOptions,
+  ): FalconPairInterface {
     types.typeforce(ecc.isPoint, buffer);
     types.typeforce(isOptions, options);
-    return new ECPair(undefined, buffer, options);
+    return new FalconPair(undefined, buffer, options);
   }
 
   function fromWIF(
     wifString: string,
     network?: Network | Network[],
-  ): ECPairInterface {
+  ): FalconPairInterface {
     const decoded = wif.decode(wifString);
     const version = decoded.version;
 
@@ -123,12 +112,11 @@ export function ECPairFactory(ecc: TinySecp256k1Interface): ECPairAPI {
     }
 
     return fromPrivateKey(decoded.privateKey, {
-      compressed: decoded.compressed,
       network: network as Network,
     });
   }
 
-  function makeRandom(options?: ECPairOptions): ECPairInterface {
+  function makeRandom(options?: FalconPairOptions): FalconPairInterface {
     types.typeforce(isOptions, options);
     if (options === undefined) options = {};
     const rng = options.rng || randomBytes;
@@ -142,7 +130,7 @@ export function ECPairFactory(ecc: TinySecp256k1Interface): ECPairAPI {
     return fromPrivateKey(d, options);
   }
 
-  class ECPair implements ECPairInterface {
+  class FalconPair implements FalconPairInterface {
     compressed: boolean;
     network: Network;
     lowR: boolean;
@@ -150,7 +138,7 @@ export function ECPairFactory(ecc: TinySecp256k1Interface): ECPairAPI {
     constructor(
       private __D?: Buffer,
       private __Q?: Buffer,
-      options?: ECPairOptions,
+      options?: FalconPairOptions,
     ) {
       this.lowR = false;
       if (options === undefined) options = {};
@@ -204,26 +192,13 @@ export function ECPairFactory(ecc: TinySecp256k1Interface): ECPairAPI {
       }
     }
 
-    signSchnorr(hash: Buffer): Buffer {
-      if (!this.privateKey) throw new Error('Missing private key');
-      if (!ecc.signSchnorr)
-        throw new Error('signSchnorr not supported by ecc library');
-      return Buffer.from(ecc.signSchnorr(hash, this.privateKey));
-    }
-
     verify(hash: Buffer, signature: Buffer): boolean {
       return ecc.verify(hash, this.publicKey, signature);
     }
 
-    verifySchnorr(hash: Buffer, signature: Buffer): boolean {
-      if (!ecc.verifySchnorr)
-        throw new Error('verifySchnorr not supported by ecc library');
-      return ecc.verifySchnorr(hash, this.publicKey.subarray(1, 33), signature);
-    }
   }
 
   return {
-    isPoint,
     fromPrivateKey,
     fromPublicKey,
     fromWIF,

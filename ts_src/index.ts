@@ -1,10 +1,9 @@
 export {
-  ECPairFactory as default,
-  ECPairFactory,
+  FalconPairFactory as default,
+  FalconPairFactory,
   Signer,
   SignerAsync,
-  ECPairAPI,
-  ECPairInterface,
-  TinySecp256k1Interface,
+  FalconPairAPI,
+  FalconPairInterface,  
   networks,
-} from './ecpair';
+} from './falconpair';
