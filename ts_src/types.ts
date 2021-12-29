@@ -13,6 +13,9 @@ export const Network = typeforce.compile({
 });
 
 export const Buffer256bit = typeforce.BufferN(32);
+export const Buffer384bit = typeforce.BufferN(48);
+export const BufferPrivateKey = typeforce.BufferN(1281);
+export const BufferPublicKey = typeforce.BufferN(898);
 export const Array = typeforce.Array;
 export const Boolean = typeforce.Boolean; // tslint:disable-line variable-name
 export const maybe = typeforce.maybe;

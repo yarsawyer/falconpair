@@ -5,6 +5,8 @@ import * as randomBytes from 'randombytes';
 import * as wif from 'wif';
 export { networks };
 
+var factory = require('./falcon.js');
+
 const isOptions = types.typeforce.maybe(
   types.typeforce.compile({
     network: types.maybe(types.Network),
@@ -44,34 +46,13 @@ export interface FalconPairAPI {
   makeRandom(options?: FalconPairOptions): FalconPairInterface;
 }
 
-export interface TinySecp256k1Interface {
-  isPoint(p: Uint8Array): boolean;
-  pointCompress(p: Uint8Array, compressed?: boolean): Uint8Array;
-  isPrivate(d: Uint8Array): boolean;
-  pointFromScalar(d: Uint8Array, compressed?: boolean): Uint8Array | null;
-
-  sign(h: Uint8Array, d: Uint8Array, e?: Uint8Array): Uint8Array;
-  signSchnorr?(h: Uint8Array, d: Uint8Array, e?: Uint8Array): Uint8Array;
-
-  verify(
-    h: Uint8Array,
-    Q: Uint8Array,
-    signature: Uint8Array,
-    strict?: boolean,
-  ): boolean;
-  verifySchnorr?(h: Uint8Array, Q: Uint8Array, signature: Uint8Array): boolean;
-}
-
-export function FalconPairFactory(ecc: TinySecp256k1Interface): FalconPairAPI {
-
+export function FalconPairFactory(): FalconPairAPI {
 
   function fromPrivateKey(
     buffer: Buffer,
     options?: FalconPairOptions,
   ): FalconPairInterface {
-    types.typeforce(types.Buffer256bit, buffer);
-    if (!ecc.isPrivate(buffer))
-      throw new TypeError('Private key not in range [1, n)');
+    types.typeforce(types.BufferPrivateKey, buffer);
     types.typeforce(isOptions, options);
 
     return new FalconPair(buffer, undefined, options);
@@ -81,7 +62,7 @@ export function FalconPairFactory(ecc: TinySecp256k1Interface): FalconPairAPI {
     buffer: Buffer,
     options?: FalconPairOptions,
   ): FalconPairInterface {
-    types.typeforce(ecc.isPoint, buffer);
+    types.typeforce(types.BufferPublicKey, buffer);
     types.typeforce(isOptions, options);
     return new FalconPair(undefined, buffer, options);
   }
@@ -105,7 +86,7 @@ export function FalconPairFactory(ecc: TinySecp256k1Interface): FalconPairAPI {
 
       // otherwise, assume a network object (or default to bitcoin)
     } else {
-      network = network || networks.bitcoin;
+      network = network || networks.tidecoin;
 
       if (version !== (network as Network).wif)
         throw new Error('Invalid network version');
@@ -122,29 +103,22 @@ export function FalconPairFactory(ecc: TinySecp256k1Interface): FalconPairAPI {
     const rng = options.rng || randomBytes;
 
     let d;
-    do {
-      d = rng(32);
-      types.typeforce(types.Buffer256bit, d);
-    } while (!ecc.isPrivate(d));
+    d = rng(48);
+    types.typeforce(types.Buffer384bit, d);
 
     return fromPrivateKey(d, options);
   }
 
   class FalconPair implements FalconPairInterface {
-    compressed: boolean;
     network: Network;
-    lowR: boolean;
 
     constructor(
       private __D?: Buffer,
       private __Q?: Buffer,
       options?: FalconPairOptions,
     ) {
-      this.lowR = false;
       if (options === undefined) options = {};
-      this.compressed =
-        options.compressed === undefined ? true : options.compressed;
-      this.network = options.network || networks.bitcoin;
+      this.network = options.network || networks.tidecoin;
 
       if (__Q !== undefined)
         this.__Q = Buffer.from(ecc.pointCompress(__Q, this.compressed));
@@ -169,7 +143,7 @@ export function FalconPairFactory(ecc: TinySecp256k1Interface): FalconPairAPI {
 
     toWIF(): string {
       if (!this.__D) throw new Error('Missing private key');
-      return wif.encode(this.network.wif, this.__D, this.compressed);
+      return wif.encode(this.network.wif, this.__D, true);
     }
 
     sign(hash: Buffer, lowR?: boolean): Buffer {

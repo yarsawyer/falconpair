@@ -13,16 +13,16 @@ interface Bip32 {
   private: number;
 }
 
-export const bitcoin: Network = {
-  messagePrefix: '\x18Bitcoin Signed Message:\n',
-  bech32: 'bc',
+export const tidecoin: Network = {
+  messagePrefix: '\x19Tidecoin Signed Message:\n',
+  bech32: 'tbc',
   bip32: {
-    public: 0x0488b21e,
-    private: 0x0488ade4,
+    public: 0x0768acde,
+    private: 0x0768feb1,
   },
-  pubKeyHash: 0x00,
-  scriptHash: 0x05,
-  wif: 0x80,
+  pubKeyHash: 0x21,
+  scriptHash: 0x41,
+  wif: 0xb0
 };
 
 export const testnet: Network = {
