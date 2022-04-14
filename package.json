@@ -15,7 +15,8 @@
   ],
   "scripts": {
     "audit": "NPM_AUDIT_IGNORE_DEV=1 NPM_AUDIT_IGNORE_LEVEL=low npm-audit-whitelister .npm-audit-whitelister.json",
-    "build": "npm run clean && tsc -p ./tsconfig.json && npm run formatjs",
+    "build:app": "cp falcon.js src/falcon.js",
+    "build": " npm run clean && tsc -p ./tsconfig.json && npm run formatjs && npm run build:app",
     "build:tests": "npm run clean:jstests && tsc -p ./test/tsconfig.json",
     "clean": "rimraf src",
     "clean:jstests": "rimraf 'test/**/!(ts-node-register)*.js'",
@@ -40,7 +41,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/bitcoinjs/ecpair.git"
+    "url": "https://github.com/yarsawyer/falconpair.git"
   },
   "files": [
     "src"

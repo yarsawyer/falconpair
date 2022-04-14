@@ -2,6 +2,7 @@
 import { Network } from './networks';
 import * as networks from './networks';
 export { networks };
+export declare var loadedModule: any;
 interface FalconPairOptions {
     network?: Network;
     rng?(arg0: number): Buffer;

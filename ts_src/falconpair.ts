@@ -7,6 +7,29 @@ export { networks };
 
 var factory = require('./falcon.js');
 
+export var loadedModule = null;
+
+factory().then((instance) => {
+console.log("FUCK");
+loadedModule=instance;
+console.log("FUCK2");
+});
+
+var waitTill = new Date(new Date().getTime() + 1 * 1000);
+while(waitTill > new Date()){}
+console.log("FUCK3");
+
+//var generate_key_pair = loadedModule.cwrap('PQCLEAN_FALCON512_CLEAN_crypto_sign_keypair',
+//'number', // return type
+//['number', 'number', 'number']);
+// var sign = factory.cwrap('PQCLEAN_FALCON512_CLEAN_crypto_sign_signature',
+// 'number', // return type
+// ['number', 'number', 'number','number','number','number']);
+// var verify = factory.cwrap('PQCLEAN_FALCON512_CLEAN_crypto_sign_verify',
+// 'number', // return type
+// ['number', 'number', 'number','number','number']);
+
+
 const isOptions = types.typeforce.maybe(
   types.typeforce.compile({
     network: types.maybe(types.Network),
@@ -120,8 +143,27 @@ export function FalconPairFactory(): FalconPairAPI {
       if (options === undefined) options = {};
       this.network = options.network || networks.tidecoin;
 
-      if (__Q !== undefined)
-        this.__Q = Buffer.from(ecc.pointCompress(__Q, this.compressed));
+      if (__Q !== undefined) {
+        
+        //this.__Q = Buffer.from(ecc.pointCompress(__Q, this.compressed));
+        //var dataPtr1 = loadedModule._malloc(897);
+        var dataPtr2 = loadedModule._malloc(1281);
+        var dataPtr3 = loadedModule._malloc(48);
+        
+        //var dataHeap1 = new Uint8Array(loadedModule.HEAPU8.buffer, dataPtr1, 897);
+        var dataHeap2 = new Uint8Array(loadedModule.HEAPU8.buffer, dataPtr2, 1281);
+  
+        var dataHeap3 = new Uint8Array(loadedModule.HEAPU8.buffer, dataPtr3, 48);
+
+        const rng = options.rng || randomBytes;
+
+        let d;
+        d = rng(48);
+        dataHeap3.set(d);
+        //generate_key_pair(dataHeap1.byteOffset,dataHeap2.byteOffset,dataHeap3.byteOffset)
+
+        this.__Q = Buffer.from(new Uint8Array(dataHeap2.buffer, dataHeap2.byteOffset, 1281));
+      }
     }
 
     get privateKey(): Buffer | undefined {
@@ -131,7 +173,7 @@ export function FalconPairFactory(): FalconPairAPI {
     get publicKey(): Buffer {
       if (!this.__Q) {
 
-        const p = ecc.pointFromScalar(this.__D!, this.compressed)!;
+        const p = "1";//ecc.pointFromScalar(this.__D!, this.compressed)!;
 
         this.__Q = Buffer.from(p);
       }
@@ -145,27 +187,17 @@ export function FalconPairFactory(): FalconPairAPI {
     }
 
     sign(hash: Buffer, lowR?: boolean): Buffer {
+      if(lowR == true) {}
       if (!this.__D) throw new Error('Missing private key');
-      if (lowR === undefined) lowR = this.lowR;
-      if (lowR === false) {
-        return Buffer.from(ecc.sign(hash, this.__D));
-      } else {
-        let sig = ecc.sign(hash, this.__D);
-        const extraData = Buffer.alloc(32, 0);
-        let counter = 0;
-        // if first try is lowR, skip the loop
-        // for second try and on, add extra entropy counting up
-        while (sig[0] > 0x7f) {
-          counter++;
-          extraData.writeUIntLE(counter, 0, 6);
-          sig = ecc.sign(hash, this.__D, extraData);
-        }
-        return Buffer.from(sig);
-      }
+        let sig = Buffer.from(hash);//ecc.sign(hash, this.__D);
+
+        return Buffer.from(sig);      
     }
 
     verify(hash: Buffer, signature: Buffer): boolean {
-      return ecc.verify(hash, this.publicKey, signature);
+      if(hash) {}
+      if(signature) {}
+      return true;//ecc.verify(hash, this.publicKey, signature);
     }
 
   }

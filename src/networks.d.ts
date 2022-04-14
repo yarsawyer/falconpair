@@ -10,6 +10,6 @@ interface Bip32 {
     public: number;
     private: number;
 }
-export declare const bitcoin: Network;
+export declare const tidecoin: Network;
 export declare const testnet: Network;
 export {};
